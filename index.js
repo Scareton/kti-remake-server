@@ -7,13 +7,15 @@ mongoose.set('useCreateIndex', true);
 mongoose.set('useNewUrlParser', true);
 mongoose.set('useUnifiedTopology', true);
 
-const config = require('./config/config')
+const config = require('./src/config/config')
 const app = express()
 app.use(morgan('combined'))
 app.use(bodyParser.json())
 app.use(cors())
 // app.use(require('./routes/sections'));
-app.use(require('./routes/posts'));
+app.use(require('./src/routes/photos'));
+app.use(require('./src/routes/posts'));
+
 
 
 
