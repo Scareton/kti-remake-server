@@ -1,6 +1,7 @@
 const express = require('express')
 var multer = require('multer')
 const path = require('path')
+const fs = require('fs')
 
 const router = express.Router()
 const Photo = require('../models/photo-model')
@@ -25,6 +26,11 @@ var storage = multer.diskStorage({
     // Директория загрузки - папка альбома в uploads/photos
     if (req.params.album) {
       dir = `${dir}/${req.params.album}`;
+    }
+
+    // Создать директорию, если она не существует
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir);
     }
 
     cb(null, dir)
@@ -62,6 +68,33 @@ router.get('/photo/albums', (req, res) => {
   })
 })
 
+router.get('/photo/albums-previews', (req, res) => {
+  Photo.aggregate(
+    [
+      { $sort: { name: 1 } },
+      {
+        $group:
+        {
+          _id: '$album',
+          name: { $first: '$albumname' },
+          cover: { $first: '$path' },
+          count: { $sum: 1 }
+        }
+      }
+    ]
+  ).exec((err, albums) => {
+    if (err) {
+      console.log(err)
+      res.sendStatus(500)
+    } else {
+      res.send({
+        success: true,
+        albums: albums
+      })
+    }
+  })
+})
+
 router.get('/photo/albums/:album', (req, res) => {
   var album = req.params.album;
   var query = Photo.find({ "album": album }).sort({ "publishedBy": -1 });
@@ -72,6 +105,7 @@ router.get('/photo/albums/:album', (req, res) => {
       res.sendStatus(500)
     } else {
       res.send({
+        success: true,
         photos: photos
       })
     }
@@ -103,14 +137,15 @@ router.post('/photo/albums/:album', upload.array('photos', 24), (req, res) => {
   var images = [];
 
   // Если есть загруженные файлы
-  if (req.files) {;
+  if (req.files) {
+    ;
     // Перебираем их
     req.files.forEach(file => {
 
       var photo = {}; // Обхект для хранения данных фотографии
       // Находим связь между файлом и данными
       var dataItem = photosData.find(item => item.photo === file.originalname);
-      
+
       // Если данные есть - берём их за основу объекта
       if (dataItem) photo = dataItem;
 

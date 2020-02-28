@@ -22,6 +22,9 @@ const PhotoSchema = new mongoose.Schema({
   album: {
     type: String
   },
+  albumname: {
+    type: String
+  }
 })
 
 module.exports = mongoose.model('Photo', PhotoSchema)
