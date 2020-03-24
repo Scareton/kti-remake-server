@@ -14,6 +14,7 @@ app.use(bodyParser.json())
 app.use(cors())
 // app.use(require('./routes/sections'));
 app.use(require('./src/routes/photos'));
+app.use(require('./src/routes/navigations'));
 app.use(require('./src/routes/posts'));
 
 

@@ -138,7 +138,7 @@ router.post('/photo/albums/:album', upload.array('photos', 24), (req, res) => {
 
   // Если есть загруженные файлы
   if (req.files) {
-    ;
+    
     // Перебираем их
     req.files.forEach(file => {
 

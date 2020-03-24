@@ -58,7 +58,20 @@ router.get('/uploads/*', (req, res) => {
 })
 
 router.get('/sections', (req, res) => {
-  Post.distinct("path", (err, sections) => {
+  Post.aggregate(
+    [
+      { $sort: { title: 1 } },
+      {
+        $group:
+        {
+          _id: '$_id',
+          fullpath: { $first: '$fullpath' },
+          title: { $first: '$title' },
+          publishedBy: { $first: '$publishedBy' },
+        }
+      }
+    ]
+  ).exec((err, sections) => {
     if (err) {
       res.sendStatus(500)
     } else {
@@ -222,6 +235,24 @@ router.get('/*', (req, res) => {
   }
 
   // 
+})
+
+router.delete('/*', (req, res) => {
+  var path = req._parsedUrl.pathname;
+
+  Post.findOne({fullpath: path}, (err, post) => {
+    post.remove(err => {
+      if (!err) {
+        res.send({
+          success: true,
+        })
+      } else {
+        res.send({
+          success: false
+        })
+      }
+    })
+  })
 })
 
 module.exports = router
