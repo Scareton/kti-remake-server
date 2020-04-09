@@ -240,6 +240,15 @@ router.get('/api/sections', (req, res) => {
   })
 })
 
+router.get('/api/search', (req, res) => {
+  let search = req.query.search;
+
+  Post.find({ $text: { $search: search } }).limit(8).exec((err, posts) => {
+    if (!err) res.send({ posts })
+    else res.status(500).send(err)
+  })
+})
+
 
 // old
 router.get('/api/navigation', (req, res) => {

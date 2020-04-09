@@ -4,7 +4,7 @@ const mongoose = require('mongoose')
 const PostSchema = new mongoose.Schema({
   title: {
     $type: String,
-    required: true
+    required: true,
   },
   alias: {
     $type: String,
@@ -57,4 +57,23 @@ const PostSchema = new mongoose.Schema({
     default: ""
   },
 }, { typeKey: '$type' })
+
+PostSchema.index(
+  {
+    title: 'text',
+    alias: 'text',
+    description: 'text',
+    content: 'text'
+  },
+  {
+    name: 'My text index',
+    weights: {
+      title: 10,
+      alias: 2,
+      description: 4,
+      content: 1
+    }
+  }
+);
+
 module.exports = mongoose.model('Post', PostSchema)
