@@ -1,16 +1,20 @@
 const mongoose = require('mongoose')
 const PhotoSchema = new mongoose.Schema({
   path: {
-    type: String
+    type: String,
+    required: true
   },
   title: {
-    type: String
+    type: String,
+    default: ""
   },
   author: {
-    type: String
+    type: String,
+    default: ""
   },
   place: {
-    type: String
+    type: String,
+    default: ""
   },
   createdDate: {
     type: Date,
@@ -20,10 +24,12 @@ const PhotoSchema = new mongoose.Schema({
     default: Date.now
   },
   album: {
-    type: String
+    type: String,
+    default: ""
   },
   albumname: {
-    type: String
+    type: String,
+    required: true
   }
 })
 

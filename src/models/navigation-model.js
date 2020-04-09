@@ -1,7 +1,8 @@
 const mongoose = require('mongoose')
 const NavigationSchema = new mongoose.Schema({
   title: {
-    type: String
+    type: String,
+    required: true
   },
   description: {
     type: String

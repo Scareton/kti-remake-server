@@ -3,47 +3,58 @@ const mongoose = require('mongoose')
 // Посты
 const PostSchema = new mongoose.Schema({
   title: {
-    type: String,
+    $type: String,
+    required: true
   },
   alias: {
-    type: String,
+    $type: String,
+    required: true
   },
   fullpath: {
-    type: String,
+    $type: String,
+    required: true,
     unique: true,
   },
   path: {
-    type: String,
+    $type: String,
+    required: true,
+    default: ""
   },
   publishedBy: {
-    type: Date,
-    default: Date.now
+    $type: Date,
+    default: Date.now()
   },
   content: {
-    type: String
+    $type: String,
+    required: true
   },
   forms: {
-    type: Array
+    $type: Array
   },
   visible: {
-    type: Boolean
+    $type: Boolean,
+    default: false,
   },
   published: {
-    type: Boolean
+    $type: Boolean,
+    default: false
   },
 
   // news
   cover: {
-    type: String
+    $type: String
   },
   tag: {
-    type: String
+    $type: String,
+    default: ""
   },
   subtag: {
-    type: String
+    $type: String,
+    default: ""
   },
   description: {
-    type: String
+    $type: String,
+    default: ""
   },
-})
+}, { typeKey: '$type' })
 module.exports = mongoose.model('Post', PostSchema)

@@ -6,7 +6,7 @@ const Navigation = require('../models/navigation-model')
 const Post = require('../models/post-model')
 
 
-router.get('/navigations', (req, res) => {
+router.get('/api/navigations', (req, res) => {
   Navigation.aggregate([
     {
       $lookup: {
@@ -38,7 +38,7 @@ router.get('/navigations', (req, res) => {
   })
 })
 
-router.get('/navigations/:id', (req, res) => {
+router.get('/api/navigations/:id', (req, res) => {
   let navid = req.params.id;
   Navigation.findOne({ _id: navid }, (err, navigation) => {
     if (err) {
@@ -60,7 +60,7 @@ router.get('/navigations/:id', (req, res) => {
   });
 })
 
-router.post('/navigations/:id', (req, res) => {
+router.post('/api/navigations/:id', (req, res) => {
   let navid = req.params.id;
   let body = req.body
 

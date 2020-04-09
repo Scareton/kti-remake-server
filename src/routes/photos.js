@@ -43,7 +43,11 @@ var storage = multer.diskStorage({
 
 var upload = multer({ storage: storage, fileFilter: fileFilter })
 
-router.get('/photo/albums', (req, res) => {
+router.get('/api/uploads/*', (req, res) => {
+  res.sendFile(req.originalUrl.slice(4), { root: path.dirname(require.main.filename) })
+})
+
+router.get('/api/photo/albums', (req, res) => {
   Photo.aggregate(
     [
       { $sort: { name: 1 } },
@@ -68,7 +72,7 @@ router.get('/photo/albums', (req, res) => {
   })
 })
 
-router.get('/photo/albums-previews', (req, res) => {
+router.get('/api/photo/albums-previews', (req, res) => {
   Photo.aggregate(
     [
       { $sort: { name: 1 } },
@@ -95,7 +99,7 @@ router.get('/photo/albums-previews', (req, res) => {
   })
 })
 
-router.get('/photo/albums/:album', (req, res) => {
+router.get('/api/photo/albums/:album', (req, res) => {
   var album = req.params.album;
   var query = Photo.find({ "album": album }).sort({ "publishedBy": -1 });
 
@@ -113,7 +117,7 @@ router.get('/photo/albums/:album', (req, res) => {
 })
 
 // Загрузка фотографий в альбом
-router.post('/photo/albums/:album', upload.array('photos', 24), (req, res) => {
+router.post('/api/photo/albums/:album', upload.array('photos', 24), (req, res) => {
 
   // Получаем url-корректный alias и название альбома
   var album = req.params.album;
@@ -138,7 +142,7 @@ router.post('/photo/albums/:album', upload.array('photos', 24), (req, res) => {
 
   // Если есть загруженные файлы
   if (req.files) {
-    
+
     // Перебираем их
     req.files.forEach(file => {
 
@@ -169,6 +173,35 @@ router.post('/photo/albums/:album', upload.array('photos', 24), (req, res) => {
   } else {
     res.sendStatus(500)
   }
+})
+
+// Обновить поля фото
+router.put('/api/photo/:id', (req, res) => {
+  let _id = req.params.id;
+  let data = req.body;
+
+  Photo.findOne({ _id }, (err, photo) => {
+    if (!err) {
+      photo.title = data.title;
+      photo.author = data.author;
+      photo.place = data.place;
+      photo.save(response => {
+        res.send()
+      })
+    } else res.status(500).send(err)
+  })
+})
+
+// Удалить фото
+router.delete('/api/photo/:id', (req, res) => {
+  let _id = req.params.id;
+  Photo.findOne({ _id }, (err, photo) => {
+    if (!err) {
+      photo.remove(response => {
+        res.send(response)
+      })
+    } else res.status(500).send(err);
+  })
 })
 
 module.exports = router

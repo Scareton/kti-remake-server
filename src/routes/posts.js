@@ -3,6 +3,9 @@ const express = require('express')
 const router = express.Router()
 const Post = require('../models/post-model')
 
+const mongoose = require('mongoose');
+const ObjectId = mongoose.Types.ObjectId;
+
 // Multer
 const fs = require('fs-extra')
 var multer = require('multer')
@@ -19,8 +22,6 @@ const fileFilter = (req, file, cb) => {
     cb(null, false);
   }
 }
-
-
 var storage = multer.diskStorage({
   destination: function (req, file, cb) {
     let dir = "";
@@ -49,107 +50,125 @@ var storage = multer.diskStorage({
     cb(null, name + path.extname(file.originalname))
   }
 })
-
 var upload = multer({ storage: storage, fileFilter: fileFilter })
 // -----
 
-router.get('/uploads/*', (req, res) => {
-  res.sendFile(req.originalUrl, { root: path.dirname(require.main.filename) })
-})
+// Получение секции
+router.get('/api/post/childs', (req, res) => {
+  let path = req.query.path ? req.query.path : "/";
+  if (path[path.length - 1] !== "/") path += "/";
 
-router.get('/sections', (req, res) => {
   Post.aggregate(
     [
-      { $sort: { title: 1 } },
       {
-        $group:
-        {
-          _id: '$_id',
-          fullpath: { $first: '$fullpath' },
-          title: { $first: '$title' },
-          publishedBy: { $first: '$publishedBy' },
+        $sort: {
+          title: 1
         }
-      }
+      },
+      {
+        $match: {
+          path: path,
+          alias: {
+            $ne: ""
+          }
+        }
+      },
     ]
-  ).exec((err, sections) => {
+  ).exec((err, posts) => {
     if (err) {
       res.sendStatus(500)
     } else {
       res.send({
-        sections: sections
+        posts
       })
     }
   })
 })
 
-router.get('/navigation', (req, res) => {
-  if (req.query && req.query.sections) {
-    var sections = req.query.sections.split(",");
-    Post.find({ path: { $in: sections }, visible: true }, (err, posts) => {
+// Получение статьи
+router.get('/api/post/get/', (req, res) => {
+  let path = req.query.path ? req.query.path : "/";
+  if (path[path.length - 1] !== "/") path += "/";
+  console.log(path)
+
+  Post.aggregate(
+    [
+      {
+        $match: {
+          fullpath: path
+        }
+      },
+      {
+        $sort: {
+          title: 1
+        }
+      }
+    ]
+  ).exec((err, post) => {
+    if (err) {
+      res.sendStatus(500)
+    } else {
       res.send({
-        sections: sections,
-        posts: posts
+        post
       })
-    })
-  }
-})
-
-router.post('/loadimage', upload.single('file'), (req, res) => {
-  if (res && req.file) {
-    res.send({
-      success: true,
-      location: req.file.path,
-    })
-  } else {
-    res.send({
-      success: false,
-      message: "Произошла ошибка",
-    })
-  }
-})
-
-router.put('/*', upload.single('cover'), (req, res) => {
-  var fullpath = req.body.path + req.body.alias;
-  const post = req.body;
-  if (req.file) {
-    post.cover = req.file.path;
-  }
-
-  if (post.images) {
-    var images = post.images.split(",");
-    var newdest = `uploads/${post._id}`;
-    // Если конечной директории не существует - создаём её
-    if (!fs.existsSync(newdest)) {
-      fs.mkdirSync(newdest);
     }
-
-    images.forEach(item => {
-      // Новый путь = /uploads/{id_документа}/{имя_и_расширение_файла}
-      var newpath = `${newdest}/${path.basename(item)}`;
-      post.content = post.content.replace(item, newpath);
-
-      fs.copyFile(item, newpath, (err) => {
-        if (err) throw err;
-
-        // Удаляем временный файл
-        fs.unlink(item, (err) => {
-          if (err) throw err;
-        });
-      })
-    });
-  }
-
-  Post.replaceOne({ '_id': post._id }, post).then(response => {
-    res.send({
-      success: true,
-      post: post,
-      message: response
-    })
   })
 })
 
-router.post('/*', upload.single('cover'), (req, res) => {
-  var fullpath = req.body.path + req.body.alias;
+// Обновление статьи
+router.put('/api/post/update/', upload.single('cover'), (req, res) => {
+  let path = req.query.path ? req.query.path : "/";
+  if (path[path.length - 1] !== "/") path += "/";
+
+  const _id = ObjectId(req.body._id);
+
+  Post.deleteOne({ _id: _id }, (err, response) => {
+    if (!err) {
+      const post = new Post(req.body);
+
+      if (req.file) {
+        post.cover = req.file.path;
+      }
+
+      if (post.images) {
+        var images = post.images.split(",");
+        var newdest = `uploads/${post._id}`;
+        // Если конечной директории не существует - создаём её
+        if (!fs.existsSync(newdest)) {
+          fs.mkdirSync(newdest);
+        }
+
+        images.forEach(item => {
+          // Новый путь = /uploads/{id_документа}/{имя_и_расширение_файла}
+          var newpath = `${newdest}/${path.basename(item)}`;
+          post.content = post.content.replace(item, newpath);
+
+          fs.copyFile(item, newpath, (err) => {
+            if (err) throw err;
+
+            // Удаляем временный файл
+            fs.unlink(item, (err) => {
+              if (err) throw err;
+            });
+          })
+        });
+      }
+
+      post.save((err, post) => {
+        if (!err) res.send(post);
+        else res.status(500).send(err)
+      })
+    }
+  });
+
+
+})
+
+// Создание статьи
+router.post('/api/post/create', upload.single('cover'), (req, res) => {
+  let path = req.query.path ? req.query.path : "/";
+  if (path[path.length - 1] !== "/") path += "/";
+
   const post = new Post(req.body);
 
   if (req.file) {
@@ -179,80 +198,119 @@ router.post('/*', upload.single('cover'), (req, res) => {
   }
 
   post.save((err, data) => {
-    if (err) {
-      console.log(err)
-    } else {
-      // Отправляем ответ. Конец запроса
+    if (!err) res.send(data)
+    else res.status(500).send(err)
+  })
+})
 
+// Удаление статьи
+router.delete('/api/post/remove', (req, res) => {
+  let _id = req.query._id;
+
+  Post.findOne({ _id }, (err, post) => {
+    post.remove(err => {
+      if (!err) res.send({ success: true })
+      else res.status(500).send(err)
+    })
+  })
+})
+
+router.get('/api/sections', (req, res) => {
+  Post.aggregate(
+    [
+      { $sort: { title: 1 } },
+      {
+        $group:
+        {
+          _id: '$_id',
+          fullpath: { $first: '$fullpath' },
+          title: { $first: '$title' },
+          publishedBy: { $first: '$publishedBy' },
+        }
+      }
+    ]
+  ).exec((err, sections) => {
+    if (err) {
+      res.sendStatus(500)
+    } else {
       res.send({
-        success: true,
-        post: post
+        sections
       })
     }
   })
 })
 
-router.get('/*', (req, res) => {
-  var path = req._parsedUrl.pathname;
-  path = path.replace(/([^\/]+)$/, "");
 
-  var query = Post.find({ "path": path }).sort({ "publishedBy": -1 });
-  var count = null;
-
-  if (req.query) {
-    if (req.query.limit) {
-      var limit = parseInt(req.query.limit, 10)
-      if (limit) query.limit(limit);
-    }
-    if (req.query.offset) {
-      var skip = parseInt(req.query.offset, 10);
-      if (skip) query.skip(skip);
-    }
-    if (req.query.count) {
-      count = true;
-    }
-  }
-
-
-  // Если нужно получить только количество документов
-  if (count) {
-    Post.count({ "path": path }, (err, count) => {
+// old
+router.get('/api/navigation', (req, res) => {
+  if (req.query && req.query.sections) {
+    var sections = req.query.sections.split(",");
+    Post.find({ path: { $in: sections }, visible: true }, (err, posts) => {
       res.send({
-        count: count
+        sections: sections,
+        posts: posts
       })
+    })
+  }
+})
+
+router.post('/api/loadimage', upload.single('file'), (req, res) => {
+  if (res && req.file) {
+    res.send({
+      success: true,
+      location: req.file.path,
     })
   } else {
-    query.exec().then((response) => {
-      if (response) {
-        var send = {
-          posts: response,
-          post: response.filter(post => post.fullpath === req._parsedUrl.pathname)[0],
-        }
-        if (count) send.count = count;
-        res.send(send)
-      }
+    res.send({
+      success: false,
+      message: "Произошла ошибка",
     })
   }
-
-  // 
 })
 
-router.delete('/*', (req, res) => {
-  var path = req._parsedUrl.pathname;
+// router.get('/api/*', (req, res) => {
+//   var path = req._parsedUrl.pathname;
+//   path = path.replace(/([^\/]+)$/, "");
 
-  Post.findOne({fullpath: path}, (err, post) => {
-    post.remove(err => {
-      if (!err) {
-        res.send({
-          success: true,
-        })
-      } else {
-        res.send({
-          success: false
-        })
-      }
-    })
-  })
-})
+//   var query = Post.find({ "path": path }).sort({ "publishedBy": -1 });
+//   var count = null;
+
+//   if (req.query) {
+//     if (req.query.limit) {
+//       var limit = parseInt(req.query.limit, 10)
+//       if (limit) query.limit(limit);
+//     }
+//     if (req.query.offset) {
+//       var skip = parseInt(req.query.offset, 10);
+//       if (skip) query.skip(skip);
+//     }
+//     if (req.query.count) {
+//       count = true;
+//     }
+//   }
+
+
+//   // Если нужно получить только количество документов
+//   if (count) {
+//     Post.count({ "path": path }, (err, count) => {
+//       res.send({
+//         count: count
+//       })
+//     })
+//   } else {
+//     query.exec().then((response) => {
+//       if (response) {
+//         var send = {
+//           posts: response,
+//           post: response.filter(post => post.fullpath === req._parsedUrl.pathname)[0],
+//         }
+//         if (count) send.count = count;
+//         res.send(send)
+//       }
+//     })
+//   }
+
+//   // 
+// })
 
 module.exports = router
